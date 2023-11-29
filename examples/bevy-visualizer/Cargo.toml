@@ -1,11 +1,11 @@
 [package]
 name = "bevy-visualizer"
 authors = ["Philip Linden <lindenphilipj@gmail.com>"]
-description = "Visualize Nyx trajectories with Bevy, inspired by particular.rs"
+description = "Visualize Nyx trajectories with Bevy, inspired by Particular"
 publish = false
-edition.workspace = true
-version.workspace = true
-license.workspace = true
+edition = "2021"
+version = "0.1.0"
+license = "AGPL-3.0-or-later"
 
 [dependencies]
 bevy = "0.12.0"

@@ -5,4 +5,8 @@
         "editor.defaultFormatter": "rust-lang.rust-analyzer",
         "editor.formatOnSave": true
     },
+    "rust-analyzer.linkedProjects": [
+        "./examples/bevy-visualizer/Cargo.toml",
+    ],
+    "rust-analyzer.showUnlinkedFileNotification": false,
 }
