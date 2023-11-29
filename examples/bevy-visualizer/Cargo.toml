@@ -1,0 +1,13 @@
+[package]
+name = "bevy-visualizer"
+authors = ["Philip Linden <lindenphilipj@gmail.com>"]
+description = "Visualize Nyx trajectories with Bevy, inspired by particular.rs"
+publish = false
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+
+[dependencies]
+bevy = "0.12.0"
+bevy_egui = "0.23.0"
+nyx-space = { path = "../../nyx-space" }
