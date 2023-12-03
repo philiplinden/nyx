@@ -1,24 +1,19 @@
 #![allow(clippy::too_many_arguments)]
 
-mod camera;
-use camera::*;
-
-mod nbody;
-use nbody::*;
-
-mod orbit_prediction;
-use orbit_prediction::*;
-
-mod physics;
-use physics::*;
-
-mod selection;
-use selection::*;
-
-mod ui;
-use ui::*;
-
 use bevy::prelude::*;
+
+pub mod model;
+use crate::model::{
+    kinematics::*,
+    nbody::*,
+    orbit_prediction::*,
+};
+pub mod visualizer;
+use crate::visualizer::{
+    camera::*,
+    selection::*,
+    ui::*,
+};
 
 /**
  * For a Bevy app, the main function is the hub where all plugins, resources,
@@ -60,7 +55,7 @@ fn main() {
 fn setup_scene(
     mut commands: Commands,
     mut event_writer: EventWriter<ComputePredictionEvent>,
-    physics: Res<PhysicsSettings>,
+    kinematics: Res<PhysicsSettings>,
 ) {
     /*!
      * Set up the scene space with a camera in an appropriate location to see
@@ -88,14 +83,11 @@ fn setup_scene(
         },
     ));
 
-    //! Spawn all entities that will be shown in the visualization.
-    /*!
-     * Spawn the Sun.
-     */
+    // Describe the Sun
     let sun_color = Color::rgb(1.0, 1.0, 0.9);
     // TODO: Replace nbody with Nyx body
     let sun = BodySetting {
-        name: "Star",
+        name: "Sun",
         velocity: Vec3::new(-0.1826, -0.001, 0.0),
         mu: 5E3,
         radius: 8.0,
@@ -107,11 +99,7 @@ fn setup_scene(
         ..default()
     };
 
-    /*!
-     * Spawn the Earth at the origin. Represent it with a low-poly model.
-     * 
-     * TODO: add a scale slider to adjust the size of the model.
-     */
+    // Describe the Earth at the origin. Represent it with a low-poly model.
     let earth = BodySetting {
         name: "Earth",
         position: Vec3::new(0.0, 60.0, 0.0),
@@ -125,12 +113,8 @@ fn setup_scene(
     }
     .orbiting(&sun, Vec3::Z);
 
-    /*!
-     * Spawn Luna. Represent it with a low-poly model.
-     * 
-     * TODO: The moon should always scale with the scale of Earth's model.
-     */
-    let moon = BodySetting {
+    // Describe Luna. Represent it with a low-poly model.
+    let luna = BodySetting {
         name: "Luna",
         position: earth.position + Vec3::new(4.5, 0.0, 0.0),
         mu: 1.0,
@@ -143,12 +127,27 @@ fn setup_scene(
     }
     .orbiting(&earth, Vec3::new(0.0, 0.5, -1.0));
 
-    //! Snap the camera to a body.
+    // Spawn the sun.
+    let mut sun_bundle = BodyBundle::new(sun);
+    sun_bundle.prediction_bundle.draw.steps = Some(0);
+    let sun = commands.spawn((sun_bundle, Selected)).id();
+
+    // Spawn Earth
+    let mut earth_bundle = BodyBundle::new(earth);
+    earth_bundle.prediction_bundle.draw.reference = Some(sun);
+    let earth = commands.spawn(earth_bundle).id();
+
+    // Spawn Luna
+    let mut luna_bundle = BodyBundle::new(luna);
+    luna_bundle.prediction_bundle.draw.reference = Some(earth);
+    commands.spawn(luna_bundle);
+
+    // Snap the camera to a body.
     commands.insert_resource(Followed(Some(earth)));
 
-    //! Tell the simulation to start ticking.
+    // Tell the simulation to start ticking.
     event_writer.send(ComputePredictionEvent {
-        steps: physics.steps_per_second() * 60 * 5,
+        steps: kinematics.steps_per_second() * 60 * 5,
     });
 }
 
@@ -167,7 +166,7 @@ pub struct BodyMaterial {
 impl Default for BodyMaterial {
     fn default() -> Self {
         Self {
-            //! All hail the default cube!
+            // All hail the default cube!
             mesh: shape::Cube { size: 10.0 }.into(),
             material: StandardMaterial::default(),
         }
@@ -194,14 +193,14 @@ fn add_materials(
                         shadows_enabled: true,
                         ..default()
                     },
-                    //! Put the light at the center of the body
+                    // Put the light at the center of the body
                     transform: Transform::from_xyz(0.0, 0.0, 0.0),
                     ..default()
                 });
             });
         }
 
-        //! PBR == Physically Based Rendering. Color, reflectance, normals, etc
+        // PBR == Physically Based Rendering. Color, reflectance, normals, etc
         cmds.insert(PbrBundle {
             mesh: meshes.add(mesh),
             material: materials.add(material),
@@ -286,7 +285,7 @@ impl BodyBundle {
             can_select: CanSelect {
                 radius: setting.radius,
             },
-            //! Transform the camera with the body as it translates.
+            // Transform the camera with the body as it translates.
             can_follow: CanFollow {
                 min_camera_distance: setting.radius * 3.0,
                 saved_transform: Transform::from_xyz(0.0, 0.0, setting.radius * 20.0),
@@ -297,7 +296,7 @@ impl BodyBundle {
                 position: Position(setting.position),
                 ..default()
             },
-            //! This bundle displays the trajectory.
+            // This bundle displays the trajectory.
             prediction_bundle: PredictionBundle {
                 draw: PredictionDraw {
                     color: setting.material.base_color,
@@ -305,7 +304,7 @@ impl BodyBundle {
                 },
                 ..default()
             },
-            //! TODO: Replace this with fancy assets.
+            // TODO: Replace this with fancy assets.
             body_material: BodyMaterial {
                 mesh: shape::UVSphere {
                     radius: setting.radius,
@@ -316,4 +315,12 @@ impl BodyBundle {
             },
         }
     }
+}
+
+pub fn format_duration(duration: std::time::Duration, precision: usize) -> String {
+    humantime::format_duration(duration)
+        .to_string()
+        .split_inclusive(' ')
+        .take(precision)
+        .collect::<String>()
 }

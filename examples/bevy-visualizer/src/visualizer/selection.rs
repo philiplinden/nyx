@@ -4,6 +4,7 @@
  * `pocket-solar-system`.
  */
 use bevy::prelude::*;
+use bevy::input::mouse::MouseButtonInput;
 
 #[derive(Component, Default)]
 pub struct CanSelect {
@@ -13,20 +14,17 @@ pub struct CanSelect {
 #[derive(Component, Default)]
 pub struct Selected;
 
-#[derive(Event, Deref, DerefMut)]
-pub struct ClickEvent(pub Option<Entity>);
-
 pub struct SelectionPlugin;
 
 impl Plugin for SelectionPlugin {
     fn build(&self, app: &mut App) {
-        app.add_event::<ClickEvent>()
+        app.add_event::<MouseButtonInput>()
             .add_systems(Update, (entity_picker, select_clicked).chain());
     }
 }
 
 fn entity_picker(
-    mut click_entity_events: EventWriter<ClickEvent>,
+    mut click_entity_events: EventWriter<MouseButtonInput>,
     mouse_input: Res<Input<MouseButton>>,
     query_window: Query<&Window>,
     query_camera: Query<(&GlobalTransform, &Camera)>,
@@ -61,28 +59,28 @@ fn entity_picker(
                 .map(|(entity, _)| entity)
         });
 
-    click_entity_events.send(ClickEvent(clicked_entity));
+    // click_entity_events.send(MouseButtonInput(clicked_entity));
 }
 
 fn select_clicked(
     mut commands: Commands,
     mut ctxs: bevy_egui::EguiContexts,
-    mut selection_events: EventReader<ClickEvent>,
+    mut selection_events: EventReader<MouseButtonInput>,
     query_selected: Query<Entity, With<Selected>>,
 ) {
     if ctxs.ctx_mut().is_pointer_over_area() {
         return;
     }
 
-    for &ClickEvent(entity) in &mut selection_events {
-        for entity in &query_selected {
-            commands.entity(entity).remove::<Selected>();
-        }
+    // for &ClickEvent(entity) in &mut selection_events {
+    //     for entity in &query_selected {
+    //         commands.entity(entity).remove::<Selected>();
+    //     }
 
-        if let Some(entity) = entity {
-            commands.entity(entity).insert(Selected);
-        }
-    }
+    //     if let Some(entity) = entity {
+    //         commands.entity(entity).insert(Selected);
+    //     }
+    // }
 }
 
 fn _show_pickable_zone(

@@ -53,17 +53,17 @@ pub fn camera_controls(
     let window_size = Vec2::new(window.width(), window.height());
 
     let scroll = scroll_events
-        .iter()
+        .read()
         .map(|ev| match ev.unit {
             bevy::input::mouse::MouseScrollUnit::Pixel => ev.y * 0.005,
             bevy::input::mouse::MouseScrollUnit::Line => ev.y * 1.0,
         })
         .sum::<f32>();
 
-    //! TODO: Add a middle-click-to-pan control.
+    // TODO: Add a middle-click-to-pan control.
     let motion = input_mouse
         .pressed(MouseButton::Right)
-        .then(|| motion_events.iter().map(|ev| ev.delta).sum::<Vec2>())
+        .then(|| motion_events.read().map(|ev| ev.delta).sum::<Vec2>())
         .unwrap_or_default();
 
     motion_events.clear();

@@ -165,20 +165,20 @@ fn windows_selection(
                         .and_then(|e| query_selection.get(e).ok())
                         .unwrap_or(none);
 
-                    egui::ComboBox::from_label("Reference")
-                        .selected_text(reference.1.to_string())
-                        .show_ui(ui, |ui| {
-                            [none]
-                                .into_iter()
-                                .chain(query_selection.iter().filter(|(s, ..)| *s != entity))
-                                .for_each(|(entity, name, ..)| {
-                                    ui.selectable_value(
-                                        &mut draw.reference,
-                                        entity,
-                                        name.to_string(),
-                                    );
-                                });
-                        });
+                    // egui::ComboBox::from_label("Reference")
+                    //     .selected_text(reference.1.to_string())
+                    //     .show_ui(ui, |ui| {
+                    //         [none]
+                    //             .into_iter()
+                    //             .chain(query_selection.iter().filter(|(s, ..)| *s != entity))
+                    //             .for_each(|(entity, name, ..)| {
+                    //                 ui.selectable_value(
+                    //                     &mut draw.reference,
+                    //                     entity,
+                    //                     name.to_string(),
+                    //                 );
+                    //             });
+                    //     });
 
                     if ui.checkbox(&mut draw.steps.is_none(), "Draw all").changed() {
                         if draw.steps.is_none() {
