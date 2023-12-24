@@ -2,8 +2,7 @@ use eframe;
 use pretty_env_logger;
 
 mod gui;
-mod scenario;
-
+mod scenarios;
 use gui::NyxGui;
 
 fn main() -> eframe::Result<()> {

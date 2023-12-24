@@ -5,41 +5,49 @@ use nyx_space::{
     cosmic::{Bodies, Cosm},
     dynamics::{Drag, Harmonics, OrbitalDynamics, PointMasses, SolarPressure, SpacecraftDynamics},
     io::gravity::HarmonicsMem,
-    md::Event,
-    od::ui::GroundStation,
+    md::{Event, trajectory::Traj},
+    od::GroundStation,
     propagators::Propagator,
     time::{Epoch, Unit},
     Orbit, Spacecraft,
 };
 
+/// Use an enum to allow picking from a list of Scenario to run in the UI.
+/// The enum here allows other places to call functinos without needing to know
+/// what Scenario exist, they just ask it to do stuff and it decides which
+/// functions to run based on the enum's value.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub enum Scenarios {
+pub enum Scenario {
     LunarTransfer,
     OrbitDesign,
+    IntlSpaceStation,
 }
 
-impl fmt::Display for Scenarios {
+impl fmt::Display for Scenario {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), std::fmt::Error> {
         match self {
-            Scenarios::LunarTransfer => write!(f, "Lunar Transfer"),
-            Scenarios::OrbitDesign => write!(f, "Orbit Design"),
+            Scenario::LunarTransfer => write!(f, "Lunar Transfer"),
+            Scenario::OrbitDesign => write!(f, "Orbit Design"),
+            Scenario::IntlSpaceStation => write!(f, "Where is the ISS?"),
         }
     }
 }
 
-impl Scenarios {
+impl Scenario {
     pub fn run(&self) {
-
+        // invoke Nyx to run the pre-programmed scenario that corresponds to
+        // the enum's value.
         info!("running scenario: {:?}", self.to_string());
-        match self {
-            Scenarios::LunarTransfer => lunar_transfer(),
-            Scenarios::OrbitDesign => orbit_design(),
-        }
+        let traj: Traj<Orbit> = match self {
+            Scenario::LunarTransfer => lunar_transfer(),
+            Scenario::OrbitDesign => orbit_design(),
+            Scenario::IntlSpaceStation => where_is_intl_space_station(),
+        };
         info!("done.")
     }
 }
 
-fn lunar_transfer() {
+fn lunar_transfer() -> Traj<Orbit> {
     // Initialize the cosm which stores the ephemeris
     let cosm = Cosm::de438();
     // Grab the frames we'll use
@@ -97,9 +105,10 @@ fn lunar_transfer() {
         .with(sat)
         .until_event(30. * Unit::Day, &Event::periapsis())
         .unwrap();
+    traj.downcast() // return the generic orbit without spacecraft state
 }
 
-fn orbit_design() {
+fn orbit_design() -> Traj<Orbit> {
     // Load the NASA NAIF DE438 planetary ephemeris.
     let cosm = Cosm::de438();
     // Grab the Earth Mean Equator J2000 frame
@@ -119,7 +128,6 @@ fn orbit_design() {
         112.1402,
         0.0,
         cosm.frame("IAU Earth"),
-        cosm.clone(),
     );
 
     // Let's print this landmark to make sure we've created it correctly.
@@ -139,4 +147,9 @@ fn orbit_design() {
 
     // Printing the state with `:o` will print its Keplerian elements
     info!("{:?}", final_state);
+    traj
+}
+
+fn where_is_intl_space_station() -> Traj<Orbit> {
+    todo!()
 }
