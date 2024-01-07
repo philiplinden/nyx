@@ -1,23 +1,30 @@
-use eframe;
-use pretty_env_logger;
+use bevy::prelude::*;
+
+mod bodies;
+use bodies::{spawn_bodies, CelestialBodyPlugin};
 
 mod gui;
-mod scenarios;
-use gui::NyxGui;
+use gui::GuiPlugin;
 
-fn main() -> eframe::Result<()> {
-    pretty_env_logger::init(); // log events to stdout (export RUST_LOG=info)
+mod physics;
+use physics::PhysicsPlugin;
 
-    // set default options for the UI window when it spawns
-    let native_options = eframe::NativeOptions {
-        viewport: egui::ViewportBuilder::default(),
-        ..Default::default()
-    };
-
-    // run the app
-    eframe::run_native(
-        "Nyx Space",
-        native_options,
-        Box::new(|cc| Box::new(NyxGui::new(cc))),
-    )
+fn main() {
+    App::new()
+        .add_plugins((
+            DefaultPlugins.set(WindowPlugin {
+                primary_window: Some(Window {
+                    fit_canvas_to_parent: true,
+                    prevent_default_event_handling: false,
+                    canvas: Some("#app".to_owned()),
+                    ..default()
+                }),
+                ..default()
+            }),
+            GuiPlugin,
+            CelestialBodyPlugin,
+            PhysicsPlugin,
+        ))
+        .add_systems(Startup, spawn_bodies)
+        .run();
 }

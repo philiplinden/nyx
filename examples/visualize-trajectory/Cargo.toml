@@ -7,11 +7,18 @@ authors = ["Philip Linden <lindenphilipj@gmail.com>"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-eframe = "0.24.1"
-egui = "0.24.1"
-egui_extras = { version = "0.24.2", features = ["datepicker"] }
-egui_plot = "0.24.1"
-log = "0.4.20"
+bevy = "0.12.1"
+bevy_egui = "0.24.0"
+crossbeam-channel = "0.5.10"
+humantime = "2.1.0"
 nyx-space = "2.0.0-beta.0"
-pretty_env_logger = "0.5.0"
-serde = { version = "1.0.193", features = ["derive"] }
+particular = "0.6.1"
+
+# Enable a small amount of optimization in debug mode
+[profile.dev]
+opt-level = 1
+incremental = true
+
+# Enable high optimizations for dependencies (incl. Bevy), but not for our code:
+[profile.dev.package."*"]
+opt-level = 3
