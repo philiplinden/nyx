@@ -1,5 +1,5 @@
 use bevy::{
-    input::mouse::{MouseMotion, MouseWheel},
+    input::mouse::{MouseMotion, MouseWheel, MouseScrollUnit},
     prelude::*,
 };
 
@@ -13,7 +13,9 @@ pub struct CameraPlugin;
 
 impl Plugin for CameraPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(PostUpdate, camera_controls);
+        app
+        .add_systems(Startup, setup_camera)
+        .add_systems(PostUpdate, camera_controls);
     }
 }
 
@@ -39,8 +41,8 @@ pub fn camera_controls(
     let scroll = scroll_events
         .read()
         .map(|ev| match ev.unit {
-            bevy::input::mouse::MouseScrollUnit::Pixel => ev.y * 0.005,
-            bevy::input::mouse::MouseScrollUnit::Line => ev.y * 1.0,
+            MouseScrollUnit::Pixel => ev.y * 0.005,
+            MouseScrollUnit::Line => ev.y * 1.0,
         })
         .sum::<f32>();
 

@@ -1,18 +1,145 @@
 use bevy::prelude::*;
+use bevy_rapier3d::prelude::*;
 
 use crate::gui::{
-    controls::Labelled,
-    selection::{CanFollow, CanSelect, Followed, Selected},
+    labels::Labelled,
+    selection::{Clickable, CanFollow, Followed, Selected}
 };
-use crate::physics::{
-    nbody::Mass,
-    orbit_prediction::{ComputePredictionEvent, PredictionBundle, PredictionDraw},
-    Acceleration, Interpolated, PhysicsSettings, Position, Velocity,
-};
+use crate::physics::PhysicsSettings;
+
+pub struct BodyPlugin;
+
+impl Plugin for BodyPlugin {
+    fn build(&self, app: &mut App) {
+        app.insert_resource(ClearColor(Color::BLACK))
+            .insert_resource(AmbientLight {
+                color: Color::NONE,
+                brightness: 0.0,
+            })
+            .insert_resource(Msaa::Sample8)
+            .add_systems(Startup, spawn_bodies)
+            .add_systems(First, add_materials);
+    }
+}
+
+#[derive(Default, Clone)]
+pub struct BodySetting {
+    name: &'static str,
+    velocity: Vec3,
+    position: Vec3,
+    mu: f32,
+    radius: f32,
+    material: StandardMaterial,
+}
+
+impl BodySetting {
+    fn orbiting(mut self, orbiting: &Self, axis: Vec3) -> Self {
+        let distance = self.position - orbiting.position;
+
+        self.velocity = distance.cross(axis).normalize()
+            * ((self.mu + orbiting.mu) / distance.length()).sqrt()
+            + orbiting.velocity;
+
+        self
+    }
+}
+
+#[derive(Component, Clone)]
+pub struct BodyMaterial {
+    pub mesh: Mesh,
+    pub material: StandardMaterial,
+}
+
+impl Default for BodyMaterial {
+    fn default() -> Self {
+        Self {
+            mesh: shape::Cube { size: 10.0 }.into(),
+            material: StandardMaterial::default(),
+        }
+    }
+}
+
+fn add_materials(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    query: Query<(Entity, &BodyMaterial), Added<BodyMaterial>>,
+) {
+    for (entity, material) in &query {
+        let mut cmds = commands.entity(entity);
+        let BodyMaterial { mesh, material } = material.clone();
+
+        cmds.insert((
+            meshes.add(mesh),
+            materials.add(material),
+            VisibilityBundle::default(),
+        ));
+    }
+}
+
+#[derive(Bundle, Default)]
+pub struct ParticleBundle {
+    pub rigidbody: RigidBody,
+    pub collider: Collider,
+    pub velocity: Velocity,
+    pub friction: Friction,
+    pub transform: TransformBundle,
+    pub mass: ColliderMassProperties,
+    pub read_mass: ReadMassProperties,
+}
+
+#[derive(Bundle, Default)]
+pub struct BodyBundle {
+    pub name: Name,
+    pub labelled: Labelled,
+    pub can_select: Clickable,
+    pub can_follow: CanFollow,
+    pub body_material: BodyMaterial,
+    pub particle_bundle: ParticleBundle,
+}
+
+
+impl BodyBundle {
+    pub fn new(setting: BodySetting) -> Self {
+        Self {
+            name: Name::new(setting.name),
+            labelled: Labelled {
+                style: TextStyle {
+                    font_size: 6.0 * (1000.0 * setting.radius).log10(),
+                    color: Color::GRAY,
+                    ..default()
+                },
+                offset: Vec2::splat(setting.radius) * 1.1,
+            },
+            can_select: Clickable {
+                radius: setting.radius,
+            },
+            can_follow: CanFollow {
+                min_camera_distance: setting.radius * 3.0,
+            },
+            particle_bundle: ParticleBundle {
+                rigidbody: RigidBody::Dynamic,
+                collider: Collider::ball(setting.radius),
+                velocity: Velocity::linear(setting.velocity),
+                friction: Friction::coefficient(0.8),
+                transform: TransformBundle::from(Transform::from_translation(setting.position)),
+                mass: ColliderMassProperties::Mass(setting.mu),
+                ..default()
+            },
+            body_material: BodyMaterial {
+                mesh: shape::UVSphere {
+                    radius: setting.radius,
+                    ..default()
+                }
+                .into(),
+                material: setting.material,
+            },
+        }
+    }
+}
 
 pub fn spawn_bodies(
     mut commands: Commands,
-    mut event_writer: EventWriter<ComputePredictionEvent>,
     physics: Res<PhysicsSettings>,
 ) {
     let star_color = Color::rgb(1.0, 1.0, 0.9);
@@ -67,174 +194,17 @@ pub fn spawn_bodies(
         },
     };
 
-    let mut star_bundle = BodyBundle::new(star);
-    star_bundle.prediction_bundle.draw.steps = Some(0);
+    let star_bundle = BodyBundle::new(star);
     let star = commands.spawn((star_bundle, Selected)).id();
 
-    let mut planet_bundle = BodyBundle::new(planet);
-    planet_bundle.prediction_bundle.draw.reference = Some(star);
-    let planet = commands.spawn(planet_bundle).id();
+    let planet_bundle = BodyBundle::new(planet);
+    commands.spawn(planet_bundle);
 
-    let mut moon_bundle = BodyBundle::new(moon);
-    moon_bundle.prediction_bundle.draw.reference = Some(planet);
+    let moon_bundle = BodyBundle::new(moon);
     commands.spawn(moon_bundle);
 
-    let mut comet_bundle = BodyBundle::new(comet);
-    comet_bundle.prediction_bundle.draw.reference = Some(star);
+    let comet_bundle = BodyBundle::new(comet);
     commands.spawn(comet_bundle);
 
     commands.insert_resource(Followed(Some(star)));
-
-    event_writer.send(ComputePredictionEvent {
-        steps: physics.steps_per_second() * 60 * 5,
-    });
-}
-
-pub struct BodyPlugin;
-
-impl Plugin for BodyPlugin {
-    fn build(&self, app: &mut App) {
-        app.insert_resource(ClearColor(Color::BLACK))
-            .insert_resource(AmbientLight {
-                color: Color::NONE,
-                brightness: 0.0,
-            })
-            .insert_resource(Msaa::Sample8)
-            .add_systems(Startup, spawn_bodies)
-            .add_systems(First, add_materials);
-    }
-}
-
-#[derive(Component, Clone)]
-pub struct BodyMaterial {
-    pub mesh: Mesh,
-    pub material: StandardMaterial,
-}
-
-impl Default for BodyMaterial {
-    fn default() -> Self {
-        Self {
-            mesh: shape::Cube { size: 10.0 }.into(),
-            material: StandardMaterial::default(),
-        }
-    }
-}
-
-pub fn add_materials(
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-    query: Query<(Entity, &BodyMaterial), Added<BodyMaterial>>,
-) {
-    for (entity, material) in &query {
-        let mut cmds = commands.entity(entity);
-
-        let BodyMaterial { mesh, material } = material.clone();
-        if material.emissive != Color::BLACK {
-            cmds.with_children(|child| {
-                child.spawn(PointLightBundle {
-                    point_light: PointLight {
-                        color: material.emissive,
-                        intensity: 5E4,
-                        range: 2E3,
-                        shadows_enabled: true,
-                        ..default()
-                    },
-                    transform: Transform::from_xyz(0.0, 0.0, 0.0),
-                    ..default()
-                });
-            });
-        }
-
-        cmds.insert(PbrBundle {
-            mesh: meshes.add(mesh),
-            material: materials.add(material),
-            ..default()
-        });
-    }
-}
-
-#[derive(Bundle, Default)]
-pub struct ParticleBundle {
-    pub interpolated: Interpolated,
-    pub acceleration: Acceleration,
-    pub velocity: Velocity,
-    pub position: Position,
-    pub mass: Mass,
-}
-
-#[derive(Bundle, Default)]
-pub struct BodyBundle {
-    pub name: Name,
-    pub labelled: Labelled, //#TODO: this should be a trait
-    pub can_select: CanSelect, //#TODO: this should be a trait
-    pub can_follow: CanFollow, //TODO: this should be a trait
-    pub body_material: BodyMaterial,
-    pub particle_bundle: ParticleBundle,
-    pub prediction_bundle: PredictionBundle,
-}
-
-#[derive(Default, Clone)]
-pub struct BodySetting {
-    name: &'static str,
-    velocity: Vec3,
-    position: Vec3,
-    mu: f32,
-    radius: f32,
-    material: StandardMaterial,
-}
-
-impl BodySetting {
-    fn orbiting(mut self, orbiting: &Self, axis: Vec3) -> Self {
-        let distance = self.position - orbiting.position;
-
-        self.velocity = distance.cross(axis).normalize()
-            * ((self.mu + orbiting.mu) / distance.length()).sqrt()
-            + orbiting.velocity;
-
-        self
-    }
-}
-
-impl BodyBundle {
-    pub fn new(setting: BodySetting) -> Self {
-        Self {
-            name: Name::new(setting.name),
-            labelled: Labelled {
-                style: TextStyle {
-                    font_size: 6.0 * (1000.0 * setting.radius).log10(),
-                    color: Color::GRAY,
-                    ..default()
-                },
-                offset: Vec2::splat(setting.radius) * 1.1,
-            },
-            can_select: CanSelect {
-                radius: setting.radius,
-            },
-            can_follow: CanFollow {
-                min_camera_distance: setting.radius * 3.0,
-            },
-            particle_bundle: ParticleBundle {
-                mass: Mass(setting.mu),
-                velocity: Velocity(setting.velocity),
-                position: Position(setting.position),
-                ..default()
-            },
-            prediction_bundle: PredictionBundle {
-                draw: PredictionDraw {
-                    color: setting.material.base_color,
-                    ..default()
-                },
-                ..default()
-            },
-            body_material: BodyMaterial {
-                mesh: shape::UVSphere {
-                    radius: setting.radius,
-                    ..default()
-                }
-                .into(),
-                material: setting.material,
-            },
-        }
-    }
 }
