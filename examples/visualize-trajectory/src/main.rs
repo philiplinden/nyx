@@ -1,13 +1,13 @@
 use bevy::prelude::*;
 
 mod bodies;
-use bodies::{spawn_bodies, CelestialBodyPlugin};
+use bodies::BodyPlugin;
 
 mod gui;
 use gui::GuiPlugin;
 
 mod physics;
-use physics::PhysicsPlugin;
+use physics::{PhysicsPlugin, PhysicsSettings};
 
 fn main() {
     App::new()
@@ -22,9 +22,13 @@ fn main() {
                 ..default()
             }),
             GuiPlugin,
-            CelestialBodyPlugin,
+            BodyPlugin,
             PhysicsPlugin,
         ))
-        .add_systems(Startup, spawn_bodies)
+        .insert_resource(ClearColor(Color::BLACK))
+        .insert_resource(AmbientLight {
+            color: Color::NONE,
+            brightness: 0.0,
+        })
         .run();
 }

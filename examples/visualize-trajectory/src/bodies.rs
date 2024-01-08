@@ -1,16 +1,20 @@
 use bevy::prelude::*;
 
-use crate::physics::{
-    nbody::Mass,
-    Position, Velocity, Acceleration, Interpolated, PhysicsSettings,
-    orbit_prediction::{ComputePredictionEvent, PredictionBundle, PredictionDraw},
-};
 use crate::gui::{
     controls::Labelled,
-    selection::{CanSelect, Selected, CanFollow, Followed},
+    selection::{CanFollow, CanSelect, Followed, Selected},
+};
+use crate::physics::{
+    nbody::Mass,
+    orbit_prediction::{ComputePredictionEvent, PredictionBundle, PredictionDraw},
+    Acceleration, Interpolated, PhysicsSettings, Position, Velocity,
 };
 
-pub fn spawn_bodies(mut commands: Commands, mut event_writer: EventWriter<ComputePredictionEvent>, physics: Res<PhysicsSettings>) {
+pub fn spawn_bodies(
+    mut commands: Commands,
+    mut event_writer: EventWriter<ComputePredictionEvent>,
+    physics: Res<PhysicsSettings>,
+) {
     let star_color = Color::rgb(1.0, 1.0, 0.9);
     let star = BodySetting {
         name: "Star",
@@ -86,18 +90,18 @@ pub fn spawn_bodies(mut commands: Commands, mut event_writer: EventWriter<Comput
     });
 }
 
-pub struct CelestialBodyPlugin;
+pub struct BodyPlugin;
 
-impl Plugin for CelestialBodyPlugin {
+impl Plugin for BodyPlugin {
     fn build(&self, app: &mut App) {
-        app
-        .insert_resource(ClearColor(Color::BLACK))
-        .insert_resource(AmbientLight {
-            color: Color::NONE,
-            brightness: 0.0,
-        })
-        .insert_resource(Msaa::Sample8)
-        .add_systems(First, add_materials);
+        app.insert_resource(ClearColor(Color::BLACK))
+            .insert_resource(AmbientLight {
+                color: Color::NONE,
+                brightness: 0.0,
+            })
+            .insert_resource(Msaa::Sample8)
+            .add_systems(Startup, spawn_bodies)
+            .add_systems(First, add_materials);
     }
 }
 
@@ -152,7 +156,7 @@ pub fn add_materials(
 
 #[derive(Bundle, Default)]
 pub struct ParticleBundle {
-    pub interolated: Interpolated,
+    pub interpolated: Interpolated,
     pub acceleration: Acceleration,
     pub velocity: Velocity,
     pub position: Position,
@@ -162,7 +166,7 @@ pub struct ParticleBundle {
 #[derive(Bundle, Default)]
 pub struct BodyBundle {
     pub name: Name,
-    pub labelled: Labelled,
+    pub labelled: Labelled, //#TODO: this should be a trait
     pub can_select: CanSelect, //#TODO: this should be a trait
     pub can_follow: CanFollow, //TODO: this should be a trait
     pub body_material: BodyMaterial,

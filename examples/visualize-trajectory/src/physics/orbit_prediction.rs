@@ -91,63 +91,8 @@ fn reset_prediction(
     query.for_each_mut(|mut state| state.reset());
 }
 
-#[cfg(target_arch = "wasm32")]
-fn compute_prediction(
-    physics: Res<PhysicsSettings>,
-    mut compute_event: EventReader<ComputePredictionEvent>,
-    mut query: Query<(&Velocity, &Position, &Mass, &mut PredictionState)>,
-    mut progress: Local<usize>,
-) {
-    let mut steps_per_frame = 5000;
-    let event = compute_event.read().next();
-    let dt = physics.delta_time;
-
-    if let Some(&ComputePredictionEvent { steps }) = event {
-        *progress = steps;
-
-        for (.., mut prediction) in &mut query {
-            prediction.positions.reserve(steps);
-        }
-    }
-
-    if *progress != 0 {
-        let mut mapped_query: Vec<_> = query
-            .iter_mut()
-            .map(|(velocity, position, mass, state)| {
-                (
-                    state.velocity.unwrap_or(**velocity),
-                    *state.positions.last().unwrap_or(position),
-                    **mass,
-                    state,
-                )
-            })
-            .collect();
-
-        steps_per_frame = steps_per_frame.min(*progress);
-
-        for _ in 0..steps_per_frame {
-            mapped_query
-                .iter()
-                .map(|&(.., position, mass, _)| (position.to_array(), mass))
-                .accelerations(&mut COMPUTE_METHOD.clone())
-                .map(Vec3::from)
-                .zip(&mut mapped_query)
-                .for_each(|(acceleration, (velocity, position, .., state))| {
-                    *velocity += acceleration * dt;
-                    *position += *velocity * dt;
-
-                    state.push(*velocity, *position);
-                });
-        }
-
-        *progress -= steps_per_frame;
-    }
-}
-
-#[cfg(not(target_arch = "wasm32"))]
 type PredictionReceiver = crossbeam_channel::Receiver<Vec<(Entity, Vec3, Vec3)>>;
 
-#[cfg(not(target_arch = "wasm32"))]
 fn compute_prediction(
     physics: Res<PhysicsSettings>,
     mut compute_event: EventReader<ComputePredictionEvent>,

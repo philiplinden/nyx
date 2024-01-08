@@ -11,7 +11,7 @@ pub struct Mass(pub f32);
 pub struct ParticularPlugin;
 
 impl Plugin for ParticularPlugin {
-    fn build(&self, app: &mut bevy::prelude::App) {
+    fn build(&self, app: &mut App) {
         app.add_systems(
             PhysicsSchedule,
             accelerate_particles.in_set(PhysicsSet::First),

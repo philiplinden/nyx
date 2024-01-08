@@ -1,13 +1,15 @@
-pub mod nbody;
-pub mod orbit_prediction;
-
 use std::time::Duration;
 
-use bevy::prelude::*;
+use bevy::{
+    ecs::schedule,
+    prelude::*,
+};
 
+pub mod nbody;
+pub mod orbit_prediction;
 use self::{nbody::ParticularPlugin, orbit_prediction::OrbitPredictionPlugin};
 
-#[derive(bevy::ecs::schedule::ScheduleLabel, Debug, Hash, PartialEq, Eq, Clone)]
+#[derive(schedule::ScheduleLabel, Debug, Hash, PartialEq, Eq, Clone)]
 pub struct PhysicsSchedule;
 
 #[derive(SystemSet, Debug, Hash, PartialEq, Eq, Clone)]
@@ -88,9 +90,10 @@ pub struct PhysicsPlugin;
 
 impl Plugin for PhysicsPlugin {
     fn build(&self, app: &mut App) {
-        app.register_type::<Acceleration>()
-            .register_type::<Velocity>()
+        app
             .add_plugins((OrbitPredictionPlugin, ParticularPlugin))
+            .register_type::<Acceleration>()
+            .register_type::<Velocity>()
             .add_schedule(Schedule::new(PhysicsSchedule))
             .configure_sets(
                 PhysicsSchedule,
