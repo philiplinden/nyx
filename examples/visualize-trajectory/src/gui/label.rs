@@ -1,20 +1,10 @@
 use bevy::prelude::*;
 
-use crate::gui::selection::Selected;
-
-pub struct LabelsPlugin;
-
-impl Plugin for LabelsPlugin {
+pub struct EntityLabelPlugin;
+impl Plugin for EntityLabelPlugin {
     fn build(&self, app: &mut App) {
-        app
-        .add_systems(First, spawn_labels)
-        .add_systems(
-            Update,
-            (
-                update_labels_position,
-                update_labels_color,
-            ),
-        );
+        app.add_systems(First, spawn_labels)
+            .add_systems(Update, update_labels_position);
     }
 }
 
@@ -71,29 +61,5 @@ fn update_labels_position(
         } else {
             style.display = Display::None;
         }
-    }
-}
-
-fn update_labels_color(
-    mut query_labels: Query<&mut Text>,
-    query_labelled: Query<&LabelEntity>,
-    selected: Query<Entity, Added<Selected>>,
-    mut deselected: RemovedComponents<Selected>,
-) {
-    let mut set_label_color = |entity, color| {
-        if let Ok(mut text) = query_labelled
-            .get(entity)
-            .and_then(|e| query_labels.get_mut(**e))
-        {
-            text.sections[0].style.color = color;
-        }
-    };
-
-    for entity in deselected.read() {
-        set_label_color(entity, Color::GRAY);
-    }
-
-    for entity in selected.iter() {
-        set_label_color(entity, Color::rgb(0.75, 0.0, 0.0));
     }
 }

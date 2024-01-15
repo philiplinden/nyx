@@ -10,11 +10,10 @@ authors = ["Philip Linden <lindenphilipj@gmail.com>"]
 bevy = "0.12.1"
 bevy-inspector-egui = "0.22.1"
 bevy_egui = "0.24.0"
-bevy_rapier3d = "0.23.0"
 crossbeam-channel = "0.5.10"
 humantime = "2.1.0"
 # nyx-space = "2.0.0-beta.0"
-particular = "0.6.1"
+particular = { version = "0.6.1", features = ["gpu"] }
 
 # Enable a small amount of optimization in debug mode
 [profile.dev]

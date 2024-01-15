@@ -1,29 +1,23 @@
+pub mod debug;
+pub mod hud;
+pub mod orbit_prediction;
+pub mod select;
+pub mod label;
+
 use bevy::prelude::*;
-use bevy::input::common_conditions::input_toggle_active;
 use bevy_egui::{egui, EguiContexts, EguiPlugin};
-use bevy_inspector_egui::quick::WorldInspectorPlugin;
 
-pub mod controls;
-pub mod labels;
-pub mod selection;
+pub struct BaseUiPlugin;
 
-use self::{labels::LabelsPlugin, selection::SelectionPlugin};
-
-pub struct GuiPlugin;
-
-impl Plugin for GuiPlugin {
+impl Plugin for BaseUiPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins((
-            EguiPlugin,
-            SelectionPlugin,
-            LabelsPlugin,
-            WorldInspectorPlugin::default().run_if(input_toggle_active(true, KeyCode::Escape)),
-        ))
-        .add_systems(PostStartup, setup_egui)
-        .add_systems(
-            Update,
-            (controls::selection_window, controls::simulation_window),
-        );
+        app.add_plugins(EguiPlugin)
+            .insert_resource(ClearColor(Color::BLACK))
+            .insert_resource(AmbientLight {
+                color: Color::NONE,
+                brightness: 0.0,
+            })
+            .add_systems(PostStartup, setup_egui);
     }
 }
 

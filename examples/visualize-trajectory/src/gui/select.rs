@@ -1,14 +1,6 @@
 use crate::camera::{OrbitCamera, camera_controls};
 use bevy::prelude::*;
 
-#[derive(Component, Default)]
-pub struct Clickable {
-    pub radius: f32,
-}
-
-#[derive(Event, Deref, DerefMut)]
-pub struct ClickEvent(pub Option<Entity>);
-
 #[derive(Resource, Deref, DerefMut, Default)]
 pub struct Followed(pub Option<Entity>);
 
@@ -24,6 +16,9 @@ pub struct Selected;
 pub struct CanSelect {
     pub radius: f32,
 }
+
+#[derive(Event, Deref, DerefMut)]
+pub struct ClickEvent(pub Option<Entity>);
 
 pub struct SelectionPlugin;
 
